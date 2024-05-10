@@ -1,30 +1,24 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using SH3Textractor;
 using SilentHunter.FileFormats.Dat;
 using SilentHunter.FileFormats.DependencyInjection;
+using Particles;
+using SilentHunter.FileFormats;
+using SilentHunter.FileFormats.Off;
+using SilentHunter.FileFormats.Sdl;
 
 namespace sh3xtractjson;
 
 public class Runner {
-    public static void Run(string filePath, RichTextBoxWriter successWriter, RichTextBoxWriter errorWriter) {
+    public static void Run(IEnumerable<string> fileList, RichTextBoxWriter successWriter, RichTextBoxWriter errorWriter, int threads, ConcurrentQueue<object> que) {
         {
             IServiceCollection svcCollection = new ServiceCollection();
-            svcCollection.AddSilentHunterParsers(_ => { });
+            svcCollection.AddSilentHunterParsers(c => {
+                c.Controllers.FromAssembly(typeof(ParticleGenerator).Assembly);
+            });
             ServiceProvider svcProvider = svcCollection.BuildServiceProvider();
-
-            var fileList = Files.RecursiveFileSearch(filePath);
-            fileList = fileList.Where(s =>
-                                          s.EndsWith(".dat")
-                                          || s.EndsWith(".sim")
-                                          || s.EndsWith(".zon")
-                                          || s.EndsWith(".val")
-                                          || s.EndsWith(".cam")
-                                          || s.EndsWith(".dsd")
-                                          || s.EndsWith(".anm")
-                                          || s.EndsWith(".sdl")
-                                          || s.EndsWith(".off"))
-                               .ToList();
 
             var serializeSettings = new JsonSerializerSettings {
                 ReferenceLoopHandling      = ReferenceLoopHandling.Ignore,
@@ -34,35 +28,78 @@ public class Runner {
             };
 
             void Doer(string file, JsonSerializer serializer) {
-                DatFile datFile = svcProvider.GetRequiredService<DatFile>();
+                ISilentHunterFile? shf = null;
                 
+                // switch based on extension
+                switch (file.Split(".").Last()) {
+                    case "dat":
+                        shf = svcProvider.GetRequiredService<DatFile>();
+                        break;
+                    case "sim":
+                        break;
+                    case "zon":
+                        break;
+                    case "val":
+                        break;
+                    case "cam":
+                        break;
+                    case "dsd":
+                        break;
+                    case "anm":
+                        break;
+                    case "sdl":
+                        shf = svcProvider.GetRequiredService<SdlFile>();
+                        break;
+                    case "off":
+                        shf = svcProvider.GetRequiredService<OffFile>();
+                        break;
+                }
+
+                if (shf == null) {
+                    errorWriter.WriteLine("No parser found for: " + file);
+                    return;
+                }
+
                 try {
                     successWriter.WriteLine("Loading: " + file);
-                    datFile.LoadAsync(file).Wait();
+
+                    Task.Run(async () => {
+                        await using var fs =
+                            new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
+                        await shf.LoadAsync(fs).ConfigureAwait(false);
+                    }).Wait();
                 }
+                
                 catch (Exception e) {
                     errorWriter.WriteLine("Error loading: " + file + " - " + e.Message);
                     return;
                 }
 
                 string newFile = file + ".sh3xtractor.json";
-                using (StreamWriter sw = new StreamWriter(newFile)) {
-                    serializer.Serialize(sw, datFile);
-                    Console.WriteLine("Saved to: " + newFile);
+                using (var sw = new StreamWriter(newFile)) {
+                    serializer.Serialize(sw, shf);
+                    successWriter.WriteLine("Done: " + file);
                 }
-
-                datFile.Dispose();
-                successWriter.WriteLine("Done: " + file);
+                if (shf is IDisposable disposable) {
+                    disposable.Dispose();
+                }
             }
 
             var options = new ParallelOptions {
-                MaxDegreeOfParallelism = Environment.ProcessorCount == 1 ? 1 : Environment.ProcessorCount - 1
+                MaxDegreeOfParallelism = threads
             };
 
             var localSerializer =
                 new ThreadLocal<JsonSerializer>(() => JsonSerializer.Create(serializeSettings));
 
-            Parallel.ForEach(fileList, options, (string f) => { Doer(f, localSerializer.Value); });
+            Parallel.ForEach(fileList, options, (string f) => {
+                try {
+                    Doer(f, localSerializer.Value);
+                }
+                finally {
+                    que.Enqueue(true);
+                }
+            });
         }
     }
 }

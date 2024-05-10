@@ -32,6 +32,9 @@ partial class Form1 {
         textBoxSuccess = new RichTextBox();
         textBoxError = new RichTextBox();
         buttonSelectFolder = new Button();
+        textBoxThreads = new TextBox();
+        labelThreads = new Label();
+        progressBarFilesDone = new ProgressBar();
         SuspendLayout();
         // 
         // textBoxFolder
@@ -77,11 +80,37 @@ partial class Form1 {
         buttonSelectFolder.UseVisualStyleBackColor = true;
         buttonSelectFolder.Click += buttonSelectFolder_Click;
         // 
+        // textBoxThreads
+        // 
+        textBoxThreads.Location = new Point(766, 54);
+        textBoxThreads.Name = "textBoxThreads";
+        textBoxThreads.Size = new Size(100, 23);
+        textBoxThreads.TabIndex = 5;
+        // 
+        // labelThreads
+        // 
+        labelThreads.AutoSize = true;
+        labelThreads.Location = new Point(783, 32);
+        labelThreads.Name = "labelThreads";
+        labelThreads.Size = new Size(46, 15);
+        labelThreads.TabIndex = 6;
+        labelThreads.Text = "threads";
+        // 
+        // progressBarFilesDone
+        // 
+        progressBarFilesDone.Location = new Point(935, 54);
+        progressBarFilesDone.Name = "progressBarFilesDone";
+        progressBarFilesDone.Size = new Size(473, 23);
+        progressBarFilesDone.TabIndex = 7;
+        // 
         // Form1
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         ClientSize = new Size(1665, 799);
+        Controls.Add(progressBarFilesDone);
+        Controls.Add(labelThreads);
+        Controls.Add(textBoxThreads);
         Controls.Add(buttonSelectFolder);
         Controls.Add(textBoxError);
         Controls.Add(textBoxSuccess);
@@ -101,4 +130,7 @@ partial class Form1 {
     private RichTextBox textBoxSuccess;
     private RichTextBox textBoxError;
     private Button buttonSelectFolder;
+    private TextBox textBoxThreads;
+    private Label labelThreads;
+    private ProgressBar progressBarFilesDone;
 }
