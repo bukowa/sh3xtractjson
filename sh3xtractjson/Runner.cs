@@ -12,7 +12,8 @@ using SilentHunter.FileFormats.Sdl;
 namespace sh3xtractjson;
 
 public class Runner {
-    public static void Run(IEnumerable<string> fileList, RichTextBoxWriter successWriter, RichTextBoxWriter errorWriter, int threads, ConcurrentQueue<object> que) {
+    public static void Run(IEnumerable<string> fileList, RichTextBoxWriter successWriter, RichTextBoxWriter errorWriter,
+                           int                 threads,  ConcurrentQueue<object> que) {
         {
             IServiceCollection svcCollection = new ServiceCollection();
             svcCollection.AddSilentHunterParsers(c => {
@@ -29,23 +30,29 @@ public class Runner {
 
             void Doer(string file, JsonSerializer serializer) {
                 ISilentHunterFile? shf = null;
-                
+
                 // switch based on extension
                 switch (file.Split(".").Last()) {
                     case "dat":
                         shf = svcProvider.GetRequiredService<DatFile>();
                         break;
                     case "sim":
+                        shf = svcProvider.GetRequiredService<DatFile>();
                         break;
                     case "zon":
+                        shf = svcProvider.GetRequiredService<DatFile>();
                         break;
                     case "val":
+                        shf = svcProvider.GetRequiredService<DatFile>();
                         break;
                     case "cam":
+                        shf = svcProvider.GetRequiredService<DatFile>();
                         break;
                     case "dsd":
+                        shf = svcProvider.GetRequiredService<DatFile>();
                         break;
                     case "anm":
+                        shf = svcProvider.GetRequiredService<DatFile>();
                         break;
                     case "sdl":
                         shf = svcProvider.GetRequiredService<SdlFile>();
@@ -69,7 +76,7 @@ public class Runner {
                         await shf.LoadAsync(fs).ConfigureAwait(false);
                     }).Wait();
                 }
-                
+
                 catch (Exception e) {
                     errorWriter.WriteLine("Error loading: " + file + " - " + e.Message);
                     return;
@@ -80,6 +87,7 @@ public class Runner {
                     serializer.Serialize(sw, shf);
                     successWriter.WriteLine("Done: " + file);
                 }
+
                 if (shf is IDisposable disposable) {
                     disposable.Dispose();
                 }
